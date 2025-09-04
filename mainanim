@@ -1,0 +1,30 @@
+#include <Windows.h>
+#include <stdio.h>
+
+
+void text() {
+	COORD pos1 = { 2, 4 };
+	COORD pos2 = { 4, 8 };
+
+	HANDLE hConsoleOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	SetConsoleCursorPosition(hConsoleOut, pos1);
+	printf("안녕하세요");
+
+	SetConsoleCursorPosition(hConsoleOut, pos2);
+	printf("안녕하세요2");
+
+	CONSOLE_SCREEN_BUFFER_INFO conScreenInfo;
+
+	GetConsoleScreenBufferInfo(hConsoleOut, &conScreenInfo);
+
+	printf("\n[%d, %d]\n", conScreenInfo.dwCursorPosition.X, conScreenInfo.dwCursorPosition.Y);
+
+	CONSOLE_CURSOR_INFO curCursorInfo;
+
+	GetConsoleCursorInfo(hConsoleOut, &curCursorInfo);
+
+	curCursorInfo.bVisible = 0;
+	SetConsoleCursorInfo(hConsoleOut, &curCursorInfo);
+
+}
