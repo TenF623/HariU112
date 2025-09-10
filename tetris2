@@ -5,7 +5,7 @@
 #include <time.h>
 #include <conio.h>
 
-#define WIDTH  12
+#define WIDTH  24
 #define HEIGHT 13
 
 void eraseBlock(HANDLE hConsole, int block, int x, int y) {
@@ -32,43 +32,70 @@ void drawBlock(HANDLE hConsole, int block, int x, int y) {
 	}
 }
 
-void blockSpawn(int x1) {
+void blockSpawn() {
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	srand(time(NULL));
-	int block = (rand() % 7) * 4 ;
-	int x = WIDTH / 2;
+	int block = (rand() % 7) * 4;
+	int originblock = block;
+	int x = WIDTH / 4;
 	int y = 0;
 
-	while (y < HEIGHT - 4) {
+	while (y < HEIGHT - 2) {
 		int time = 0;
 		int key = 0;
 		drawBlock(hConsole, block, x, y);
 		while (time < 1000) {
-			key = _getch();
-			if (key == 224) {
+			if (_kbhit()) {
 				key = _getch();
-				if (key == 75){ // 왼쪽
-					eraseBlock(hConsole, block, x, y);
-					if (x >= 1) {
-						x--;
+				if (key == 224) {
+					key = _getch();
+					if (key == 75) { // 왼쪽
+						eraseBlock(hConsole, block, x, y);
+						if (x > 1) {
+							x--;
+						}
+						drawBlock(hConsole, block, x, y);
 					}
-					drawBlock(hConsole, block, x, y);
-				}
 
-				if (key == 77) { // 오른쪽
-					eraseBlock(hConsole, block, x, y);
-					if (x <= 15) {
-						x++;
+					if (key == 77) { // 오른쪽
+						eraseBlock(hConsole, block, x, y);
+
+						int canMove = 1;
+						for (int i = 0; i < 4; i++) {
+							for (int j = 0; j < 4; j++) {
+								if (blockModel[block][i][j] == 1) {
+									// 오른쪽으로 이동했을 때 벽을 넘는지 확인
+									if ((x + j + 1) * 2 >= WIDTH) {
+										canMove = 0;
+									}
+								}
+							}
+						}
+
+						if (canMove) {
+							x++;
+						}
+
+						drawBlock(hConsole, block, x, y);
 					}
-					drawBlock(hConsole, block, x, y);
-				}
 
-				if (key == 72) { // 위
-					eraseBlock(hConsole, block, x, y);
-					drawBlock(hConsole, block, x, y);
-				}
 
+					if (key == 72) { // 위
+						eraseBlock(hConsole, block, x, y);
+						block++;
+						if (block >= originblock + 4) {
+							block = originblock;
+						}
+						drawBlock(hConsole, block, x, y);
+					}
+
+					if (key == 80) { // 아래
+						break;
+					}
+
+				}
 			}
+			
 			Sleep(10);
 			time += 10;
 		}
@@ -81,14 +108,41 @@ void blockSpawn(int x1) {
 
 int main() {
 	HANDLE hConsoleOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	CONSOLE_CURSOR_INFO curCursorInfo;
+	GetConsoleCursorInfo(hConsoleOut, &curCursorInfo);
+	curCursorInfo.bVisible = 0;
+	SetConsoleCursorInfo(hConsoleOut, &curCursorInfo);
 	//바닥
-	for (int i = 0; i < 11; i++) {
-		COORD pos1 = { i, 12 };
+	for (int i = 0; i < WIDTH; i++) {
+		COORD pos1 = { i, HEIGHT + 1 };
 		SetConsoleCursorPosition(hConsoleOut, pos1);
-		printf("■");
+		printf("─");
 	}
 
-	blockSpawn(0);
-	blockSpawn(3);
+	//왼쪽벽
+	for (int i = 0; i <= HEIGHT; i++) {
+		COORD pos1 = { 0, i };
+		SetConsoleCursorPosition(hConsoleOut, pos1);
+		printf("│");
+		
+	}
+	COORD p = { 0, HEIGHT+1 };
+	SetConsoleCursorPosition(hConsoleOut, p);
+	printf("└");
+
+	//오른쪽벽
+	for (int i = 0; i <= HEIGHT; i++) {
+		COORD pos1 = { WIDTH, i };
+		SetConsoleCursorPosition(hConsoleOut, pos1);
+		printf("│");
+
+	}
+	p = { WIDTH, HEIGHT + 1 };
+	SetConsoleCursorPosition(hConsoleOut, p);
+	printf("┘");
+
+	blockSpawn();
+	blockSpawn();
 
 }
