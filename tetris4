@@ -1,0 +1,248 @@
+#include "block.h"
+#include <Windows.h>
+#include <stdio.h>
+#include <stdlib.h> 
+#include <time.h>
+#include <conio.h>
+
+#define WIDTH  12 * 2
+#define HEIGHT 13
+
+int stageInfo[HEIGHT + 2][WIDTH / 2 + 1] = { 0 };
+
+void eraseBlock(HANDLE hConsole, int block, int x, int y) {
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			if (blockModel[block][i][j] == 1) {
+				COORD pos = { (x + j) * 2, y + i };
+				SetConsoleCursorPosition(hConsole, pos);
+				printf("  ");
+			}
+		}
+	}
+}
+
+void drawBlock(HANDLE hConsole, int block, int x, int y) {
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			if (blockModel[block][i][j] == 1) {
+				COORD pos = { (x + j) * 2, y + i };
+				SetConsoleCursorPosition(hConsole, pos);
+				printf("■");
+			}
+		}
+	}
+}
+
+void redrawStage(HANDLE hConsole) {
+	for (int i = 0; i <= HEIGHT; i++) {
+		for (int j = 1; j < WIDTH / 2; j++) {
+			COORD pos = { j * 2, i };
+			SetConsoleCursorPosition(hConsole, pos);
+			if (stageInfo[i][j] == 0) {
+				printf("  ");
+			}
+			else if (stageInfo[i][j] == 2) {
+				printf("■");
+			}
+		}
+	}
+}
+
+
+void blockSpawn() {
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	srand(time(NULL));
+	int block = (rand() % 7) * 4;
+	int originblock = block;
+	int x = WIDTH / 4;
+	int y = 0;
+	int stop = 1;
+
+	while (stop) {
+		int time = 0;
+		int key = 0;
+		drawBlock(hConsole, block, x, y);
+		while (time < 1000) {
+			if (_kbhit()) {
+				key = _getch();
+				if (key == 224) {
+					key = _getch();
+					if (key == 75) { // 왼쪽
+						eraseBlock(hConsole, block, x, y);
+						int canMove = 1;
+						for (int i = 0; i < 4; i++) {
+							for (int j = 0; j < 4; j++) {
+								if (blockModel[block][i][j] == 1) {
+									//화면 x값: (x + j) * 2;
+									//y값 = y + i;
+									if (stageInfo[y+i][x + j - 1] > 0) {
+										canMove = 0;
+									}
+								}
+							}
+						}
+
+						if (canMove) {
+							x--;
+						}
+						drawBlock(hConsole, block, x, y);
+					}
+
+					if (key == 77) { // 오른쪽
+						eraseBlock(hConsole, block, x, y);
+
+						int canMove = 1;
+						for (int i = 0; i < 4; i++) {
+							for (int j = 0; j < 4; j++) {
+								if (blockModel[block][i][j] == 1) {
+									// 오른쪽으로 이동했을 때 벽을 넘는지 확인
+									if (stageInfo[y + i][x + j + 1] > 0) {
+										canMove = 0;
+									}
+								}
+							}
+						}
+
+						if (canMove) {
+							x++;
+						}
+
+						drawBlock(hConsole, block, x, y);
+					}
+
+
+					if (key == 72) { // 위
+						eraseBlock(hConsole, block, x, y);
+						block++;
+						if (block >= originblock + 4) {
+							block = originblock;
+						}
+						drawBlock(hConsole, block, x, y);
+					}
+
+					if (key == 80) { // 아래
+						break;
+					}
+
+				}
+			}
+			Sleep(10);
+			time += 10;
+		}
+
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 4; j++) {
+				if (blockModel[block][i][j] == 1) {
+					if (stageInfo[y + i + 1][x + j] > 0) {
+						eraseBlock(hConsole, block, x, y);
+						stop = 0;
+					}
+				}
+			}
+		}
+
+		if (stop == 1) {
+			eraseBlock(hConsole, block, x, y);
+			y++;
+		}
+		else {
+			eraseBlock(hConsole, block, x, y);
+		}
+	}
+
+	//마무리
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			if (blockModel[block][i][j] == 1) {
+				stageInfo[y + i][x + j] = 2;
+			
+			}
+		}
+	}
+	drawBlock(hConsole, block, x, y);
+}
+
+void delLine(int y) {
+	int del = 1;
+	for (int i = 1; i < WIDTH / 2; i++) {
+		if (stageInfo[y][i] != 2) {
+			del = 0;
+			break;
+		}
+	}
+	if (del) {
+		// 한 줄 내리기 (배열만)
+		for (int i = y; i > 0; i--) {
+			for (int j = 1; j < WIDTH / 2; j++) {
+				stageInfo[i][j] = stageInfo[i - 1][j];
+			}
+		}
+		// 맨 윗줄 초기화
+		for (int j = 1; j < WIDTH / 2; j++) {
+			stageInfo[0][j] = 0;
+		}
+		// 화면 갱신
+		redrawStage(GetStdHandle(STD_OUTPUT_HANDLE));
+	}
+}
+
+int main() {
+	HANDLE hConsoleOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	CONSOLE_CURSOR_INFO curCursorInfo;
+	GetConsoleCursorInfo(hConsoleOut, &curCursorInfo);
+	curCursorInfo.bVisible = 0;
+	SetConsoleCursorInfo(hConsoleOut, &curCursorInfo);
+
+	//바닥
+	for (int i = 0; i < WIDTH; i++) {
+		COORD pos1 = { i, HEIGHT + 1 };
+		stageInfo[HEIGHT + 1][i] = 1;
+		SetConsoleCursorPosition(hConsoleOut, pos1);
+		printf("─");
+	}
+
+	//왼쪽벽
+	for (int i = 0; i <= HEIGHT; i++) {
+		COORD pos1 = { 0, i };
+		stageInfo[i][0] = 1;
+		SetConsoleCursorPosition(hConsoleOut, pos1);
+		printf("│");
+
+	}
+	COORD p = { 0, HEIGHT + 1 };
+	stageInfo[HEIGHT + 1][0] = 1;
+	SetConsoleCursorPosition(hConsoleOut, p);
+	printf("└");
+
+	//오른쪽벽
+	for (int i = 0; i <= HEIGHT; i++) {
+		COORD pos1 = { WIDTH, i };
+		stageInfo[i][WIDTH / 2] = 1;
+		SetConsoleCursorPosition(hConsoleOut, pos1);
+		printf("│");
+
+	}
+	p.X = WIDTH;
+	p.Y = HEIGHT + 1;
+	stageInfo[HEIGHT + 1][WIDTH / 2] = 1;
+	SetConsoleCursorPosition(hConsoleOut, p);
+	printf("┘");
+
+	for (int i = 0; i < 10; i++) {
+		blockSpawn();
+		for (int j = HEIGHT; j >= 0; j--) {
+			delLine(j);
+		}
+	}
+
+
+	for (int i = 0; i <= HEIGHT + 1; i++) {
+		printf("\n");
+		for (int j = 0; j <= WIDTH / 2; j++) {
+			printf("%d", stageInfo[i][j]);
+		}
+
+	}
+}
